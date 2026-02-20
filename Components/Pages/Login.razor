@@ -1,0 +1,56 @@
+@page "/login"
+@inject AppointmentService AppointmentService
+@inject UserSessionState SessionState
+
+<PageTitle>Логин</PageTitle>
+
+<h1>Логин в Almaviva</h1>
+
+<EditForm Model="_model" OnValidSubmit="HandleLoginAsync">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-row">
+        <label>Email</label>
+        <InputText @bind-Value="_model.Email" />
+    </div>
+
+    <div class="form-row">
+        <label>Пароль</label>
+        <InputText @bind-Value="_model.Password" type="password" />
+    </div>
+
+    <button type="submit" disabled="@_isLoading">@(_isLoading ? "Вход..." : "Войти")</button>
+</EditForm>
+
+@if (!string.IsNullOrWhiteSpace(_statusMessage))
+{
+    <p class="status">@_statusMessage</p>
+}
+
+@code {
+    private readonly LoginRequest _model = new();
+    private bool _isLoading;
+    private string? _statusMessage;
+
+    private async Task HandleLoginAsync()
+    {
+        _isLoading = true;
+        _statusMessage = null;
+
+        var (success, error) = await AppointmentService.LoginAsync(_model);
+
+        if (success)
+        {
+            SessionState.SignIn(_model.Email);
+            _statusMessage = "Успешный вход. Теперь можно проверить слоты.";
+        }
+        else
+        {
+            SessionState.SignOut();
+            _statusMessage = $"Ошибка входа: {error}";
+        }
+
+        _isLoading = false;
+    }
+}

@@ -1,0 +1,77 @@
+@page "/"
+@inject AppointmentService AppointmentService
+@inject UserSessionState SessionState
+
+<PageTitle>Проверка слотов</PageTitle>
+
+<h1>Проверка доступности дат</h1>
+
+@if (!SessionState.IsAuthenticated)
+{
+    <p>Сначала выполните логин на странице <a href="/login">/login</a>.</p>
+}
+else
+{
+    <p>Пользователь: <strong>@SessionState.Email</strong></p>
+
+    <EditForm Model="_request" OnValidSubmit="CheckAsync">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-row">
+            <label>Код визового центра</label>
+            <InputText @bind-Value="_request.VisaCenterCode" />
+        </div>
+
+        <div class="form-row">
+            <label>Тип услуги</label>
+            <InputText @bind-Value="_request.ServiceCode" />
+        </div>
+
+        <button type="submit" disabled="@_isLoading">@(_isLoading ? "Проверяем..." : "Проверить")</button>
+    </EditForm>
+}
+
+@if (_response is not null)
+{
+    <section class="result">
+        <h3>Результат</h3>
+        <p>Проверено: @_response.CheckedAtUtc.ToLocalTime()</p>
+        <p>Слоты доступны: <strong>@_response.HasSlots</strong> (обычно false)</p>
+        <details>
+            <summary>Raw response</summary>
+            <pre>@_response.RawResponse</pre>
+        </details>
+    </section>
+}
+
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <p class="error">Ошибка: @_error</p>
+}
+
+@code {
+    private readonly SlotCheckRequest _request = new();
+    private SlotCheckResponse? _response;
+    private bool _isLoading;
+    private string? _error;
+
+    private async Task CheckAsync()
+    {
+        _isLoading = true;
+        _error = null;
+
+        try
+        {
+            _response = await AppointmentService.CheckSlotsAsync(_request);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}
