@@ -1,77 +1,82 @@
 @page "/"
-@inject AppointmentService AppointmentService
-@inject UserSessionState SessionState
+@implements IDisposable
+@inject NavigationManager Navigation
+@inject AuthService AuthService
+@inject SlotCheckService SlotCheckService
+@inject CheckerStateService State
+@inject AutoCheckCoordinator Coordinator
 
-<PageTitle>Проверка слотов</PageTitle>
+<PageTitle>Slot Checker</PageTitle>
 
-<h1>Проверка доступности дат</h1>
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
+    <FluentCard>
+        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="10">
+            <FluentButton Appearance="Appearance.Accent" OnClick="Login">Login</FluentButton>
+            <FluentButton Appearance="Appearance.Stealth" OnClick="CheckNow" Disabled="@(!AuthService.IsAuthenticated)">Check Now</FluentButton>
+            <FluentButton Appearance="Appearance.Accent" OnClick="StartAuto" Disabled="@(!AuthService.IsAuthenticated || State.AutoCheckingEnabled)">Start Automatic Checking</FluentButton>
+            <FluentButton Appearance="Appearance.Outline" OnClick="StopAuto" Disabled="@(!State.AutoCheckingEnabled)">Stop Automatic Checking</FluentButton>
+        </FluentStack>
+        <p>Authorization: <strong>@(AuthService.IsAuthenticated ? "Authorized" : "Not authorized")</strong></p>
+        <p>Status: <strong>@State.Status</strong></p>
+        <p>Last check: <strong>@(State.LastCheckAt?.ToLocalTime().ToString("G") ?? "never")</strong></p>
+    </FluentCard>
 
-@if (!SessionState.IsAuthenticated)
-{
-    <p>Сначала выполните логин на странице <a href="/login">/login</a>.</p>
-}
-else
-{
-    <p>Пользователь: <strong>@SessionState.Email</strong></p>
+    <FluentCard>
+        <h4>Found dates</h4>
+        @if (State.FoundDates.Count == 0)
+        {
+            <p>No dates found yet.</p>
+        }
+        else
+        {
+            <FluentListbox>
+                @foreach (var date in State.FoundDates)
+                {
+                    <FluentOption Value="@date">@date</FluentOption>
+                }
+            </FluentListbox>
+        }
+    </FluentCard>
 
-    <EditForm Model="_request" OnValidSubmit="CheckAsync">
-        <DataAnnotationsValidator />
-        <ValidationSummary />
-
-        <div class="form-row">
-            <label>Код визового центра</label>
-            <InputText @bind-Value="_request.VisaCenterCode" />
+    <FluentCard>
+        <h4>Live log</h4>
+        <div style="max-height: 250px; overflow: auto; background: #f4f4f4; padding: 10px; font-family: monospace;">
+            @foreach (var line in State.Logs)
+            {
+                <div>@line</div>
+            }
         </div>
-
-        <div class="form-row">
-            <label>Тип услуги</label>
-            <InputText @bind-Value="_request.ServiceCode" />
-        </div>
-
-        <button type="submit" disabled="@_isLoading">@(_isLoading ? "Проверяем..." : "Проверить")</button>
-    </EditForm>
-}
-
-@if (_response is not null)
-{
-    <section class="result">
-        <h3>Результат</h3>
-        <p>Проверено: @_response.CheckedAtUtc.ToLocalTime()</p>
-        <p>Слоты доступны: <strong>@_response.HasSlots</strong> (обычно false)</p>
-        <details>
-            <summary>Raw response</summary>
-            <pre>@_response.RawResponse</pre>
-        </details>
-    </section>
-}
-
-@if (!string.IsNullOrWhiteSpace(_error))
-{
-    <p class="error">Ошибка: @_error</p>
-}
+    </FluentCard>
+</FluentStack>
 
 @code {
-    private readonly SlotCheckRequest _request = new();
-    private SlotCheckResponse? _response;
-    private bool _isLoading;
-    private string? _error;
-
-    private async Task CheckAsync()
+    protected override void OnInitialized()
     {
-        _isLoading = true;
-        _error = null;
+        State.Changed += OnStateChanged;
+    }
 
-        try
-        {
-            _response = await AppointmentService.CheckSlotsAsync(_request);
-        }
-        catch (Exception ex)
-        {
-            _error = ex.Message;
-        }
-        finally
-        {
-            _isLoading = false;
-        }
+    private void OnStateChanged() => InvokeAsync(StateHasChanged);
+
+    private void Login() => Navigation.NavigateTo("/auth/login", true);
+
+    private async Task CheckNow() => await SlotCheckService.CheckNowAsync();
+
+    private void StartAuto()
+    {
+        Coordinator.Start(async ct => await SlotCheckService.CheckNowAsync(ct));
+        State.SetAutoChecking(true);
+        State.AddLog("Automatic checking started (interval 60 sec).");
+    }
+
+    private void StopAuto()
+    {
+        Coordinator.Stop();
+        State.SetAutoChecking(false);
+        State.AddLog("Automatic checking stopped.");
+    }
+
+    public void Dispose()
+    {
+        State.Changed -= OnStateChanged;
     }
 }
