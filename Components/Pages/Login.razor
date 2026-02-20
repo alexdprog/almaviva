@@ -1,0 +1,49 @@
+@page "/login"
+@inject NavigationManager NavigationManager
+@inject UserSessionState SessionState
+
+<PageTitle>OAuth логин</PageTitle>
+
+<h1>Логин в Almaviva через OAuth</h1>
+
+<p>
+    Для входа используйте редирект на официальный сайт.
+    После авторизации вы будете возвращены обратно в приложение.
+</p>
+
+<a class="btn" href="/auth/login">Войти через visa.almaviva-russia.ru</a>
+
+@if (!string.IsNullOrWhiteSpace(_status))
+{
+    <p class="status">@_status</p>
+}
+
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <p class="error">Ошибка входа: @_error</p>
+}
+
+@code {
+    private string? _status;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+
+        if (query.TryGetValue("error", out var error))
+        {
+            _error = error.ToString();
+            SessionState.SignOut();
+            return;
+        }
+
+        if (query.TryGetValue("success", out var successFlag) && successFlag.ToString() == "1")
+        {
+            var email = query.TryGetValue("email", out var emailValue) ? emailValue.ToString() : "oauth-user";
+            SessionState.SignIn(email);
+            _status = $"Успешный OAuth вход: {email}";
+        }
+    }
+}
