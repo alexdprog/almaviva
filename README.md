@@ -1,47 +1,28 @@
-# Almaviva Slot Checker (.NET 10 + Blazor Server)
+# Almaviva Slot Monitoring (.NET 10, Blazor Web App Server)
 
-Production-ready Blazor Server application for OAuth2 PKCE authorization and automatic/manual checking of available visa appointment slots.
+Production-oriented Blazor Web App (Server) for slot availability monitoring with:
 
-## Features
-
-- OAuth2 Authorization Code Flow + PKCE (server-side flow)
-- Callback endpoint: `/auth/callback`
-- Access/refresh token handling with proactive refresh (30 seconds before expiry)
-- `invalid_grant` handling with automatic sign-out
-- Manual check (`Check Now`)
-- Automatic check with `BackgroundService` every 60 seconds
-- Parallel check protection (`SemaphoreSlim`)
-- Telegram notifications when slots are found
-- Fluent UI Blazor dashboard with:
-  - login button
-  - auth indicator
-  - start/stop automatic checking
-  - live logs
-  - found dates list
-  - last check indicator
-  - status (`Idle / Checking / Error`)
-
-## Configuration
-
-Set values in `appsettings.json`:
-
-```json
-"OAuth": {
-  "Authority": "https://visaiam.almaviva-russia.ru/realms/oauth2-visaSystem-realm-pkce",
-  "ClientId": "aa-visasys-public",
-  "Scope": "openid profile offline_access"
-},
-"Telegram": {
-  "BotToken": "<BOT_TOKEN>",
-  "ChatId": "<CHAT_ID>"
-}
-```
+- ASP.NET Core Identity (PostgreSQL, roles Admin/User)
+- External OAuth login via Google redirect flow
+- Fluent UI Blazor dashboard and settings page
+- Periodic checks via BackgroundService
+- Manual checks from Dashboard
+- Telegram notification service via sendMessage API
+- EF Core migrations for Identity + app tables
 
 ## Run
+
+1. Configure `appsettings.json`
+2. Run PostgreSQL
+3. Apply migrations automatically on startup
+4. Start app
 
 ```bash
 dotnet restore
 dotnet run
 ```
 
-Open `https://localhost:xxxx`, click **Login**, complete OAuth, and start checks.
+## Default seed
+
+- Admin user: `admin@local`
+- Password: `Admin123!`

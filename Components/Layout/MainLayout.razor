@@ -1,9 +1,15 @@
 @inherits LayoutComponentBase
 
-<FluentHeader Style="padding: 0 16px;">
-    <h3>Almaviva Slot Checker</h3>
-</FluentHeader>
-
-<div style="padding: 16px;">
-    @Body
-</div>
+<FluentDesignSystemProvider>
+    <div class="page">
+        <header class="top-row px-4">
+            <a href="/">Dashboard</a> |
+            <a href="/settings">Settings</a> |
+            <a href="Identity/Account/Login">Login</a> |
+            <a href="Identity/Account/Register">Register</a>
+        </header>
+        <main class="content px-4 py-3">
+            @Body
+        </main>
+    </div>
+</FluentDesignSystemProvider>

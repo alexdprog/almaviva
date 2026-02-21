@@ -1,0 +1,49 @@
+@page "/"
+@attribute [Authorize]
+@inject ISlotCheckOrchestrator SlotCheckOrchestrator
+
+<PageTitle>Dashboard</PageTitle>
+
+<FluentCard>
+    <h3>Slot monitoring dashboard</h3>
+    <p>Status: <strong>@_status.StatusText</strong></p>
+    <p>Last check: <strong>@(_status.LastCheckedAt?.ToLocalTime().ToString("g") ?? "—")</strong></p>
+    <FluentButton Appearance="Appearance.Accent" @onclick="ManualCheckAsync">Проверить сейчас</FluentButton>
+</FluentCard>
+
+<FluentCard style="margin-top:12px;">
+    <h4>История проверок</h4>
+    <FluentDataGrid Items="_status.Logs.AsQueryable()">
+        <PropertyColumn Title="Checked At" Property="x => x.CheckedAt" />
+        <PropertyColumn Title="Available" Property="x => x.IsAvailable" />
+        <PropertyColumn Title="Error" Property="x => x.ErrorMessage" />
+    </FluentDataGrid>
+</FluentCard>
+
+<FluentDialog @bind-Hidden="_dialogHidden">
+    <p>@_dialogMessage</p>
+    <FluentButton @onclick="(() => _dialogHidden = true)">OK</FluentButton>
+</FluentDialog>
+
+@code {
+    private SlotStatusViewModel _status = new();
+    private bool _dialogHidden = true;
+    private string _dialogMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _status = await SlotCheckOrchestrator.GetDashboardDataAsync();
+    }
+
+    private async Task ManualCheckAsync()
+    {
+        var result = await SlotCheckOrchestrator.CheckNowAsync();
+        _status = await SlotCheckOrchestrator.GetDashboardDataAsync();
+
+        _dialogMessage = result.ErrorMessage is null
+            ? $"Результат проверки: {(result.IsAvailable ? "Available" : "Not Available")}"
+            : $"Ошибка: {result.ErrorMessage}";
+
+        _dialogHidden = false;
+    }
+}

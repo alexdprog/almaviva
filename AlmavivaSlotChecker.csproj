@@ -1,11 +1,42 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.11.0" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Data/**/*.cs" />
+    <Compile Include="Entities/**/*.cs" />
+    <Compile Include="Models/SlotCheckResult.cs" />
+    <Compile Include="Models/SlotStatusViewModel.cs" />
+    <Compile Include="Services/Interfaces/**/*.cs" />
+    <Compile Include="Services/Implementations/**/*.cs" />
+    <Compile Include="Services/Hosted/**/*.cs" />
+    <Compile Include="Migrations/**/*.cs" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Components/**/*.razor" />
+    <Content Include="Pages/**/*.cshtml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.0-preview.1.25120.3" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.0-preview.1.25120.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0-preview.1.25120.3">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.0-preview.1.25120.3">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.12.2" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0-preview.1" />
+  </ItemGroup>
+
 </Project>

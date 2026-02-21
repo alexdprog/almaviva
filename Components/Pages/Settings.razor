@@ -1,0 +1,54 @@
+@page "/settings"
+@attribute [Authorize(Roles = "Admin")]
+@inject ApplicationDbContext DbContext
+
+<PageTitle>Settings</PageTitle>
+
+<FluentCard>
+    <h3>Настройки мониторинга</h3>
+
+    <EditForm Model="_settings" OnValidSubmit="SaveAsync">
+        <FluentTextField Label="URL для проверки слотов" @bind-Value="_settings.Url" Style="width:100%;" />
+        <FluentTextField Label="Интервал проверки (в минутах)" @bind-Value="_intervalText" Style="width:100%; margin-top:8px;" />
+        <FluentTextField Label="Telegram Bot Token" @bind-Value="_settings.TelegramBotToken" Style="width:100%; margin-top:8px;" />
+        <FluentTextField Label="Telegram Chat ID" @bind-Value="_settings.TelegramChatId" Style="width:100%; margin-top:8px;" />
+        <FluentButton Appearance="Appearance.Accent" Type="ButtonType.Submit" style="margin-top:12px;">Сохранить</FluentButton>
+    </EditForm>
+</FluentCard>
+
+@code {
+    private SlotCheckSettings _settings = new();
+    private string _intervalText = "5";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _settings = await DbContext.SlotCheckSettings.FirstOrDefaultAsync() ?? new SlotCheckSettings
+        {
+            Url = "https://example.org/slots",
+            CheckIntervalMinutes = 5
+        };
+
+        _intervalText = _settings.CheckIntervalMinutes.ToString();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (!int.TryParse(_intervalText, out var interval))
+        {
+            interval = 5;
+        }
+
+        _settings.CheckIntervalMinutes = Math.Max(1, interval);
+
+        if (_settings.Id == 0)
+        {
+            DbContext.SlotCheckSettings.Add(_settings);
+        }
+        else
+        {
+            DbContext.SlotCheckSettings.Update(_settings);
+        }
+
+        await DbContext.SaveChangesAsync();
+    }
+}

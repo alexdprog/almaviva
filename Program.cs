@@ -1,47 +1,60 @@
 using AlmavivaSlotChecker.Components;
-using AlmavivaSlotChecker.Models;
-using AlmavivaSlotChecker.Services;
+using AlmavivaSlotChecker.Data;
+using AlmavivaSlotChecker.Services.Hosted;
+using AlmavivaSlotChecker.Services.Implementations;
+using AlmavivaSlotChecker.Services.Interfaces;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.FluentUI.AspNetCore.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(connectionString));
+
+builder.Services
+    .AddDefaultIdentity<ApplicationUser>(options =>
+    {
+        options.SignIn.RequireConfirmedAccount = false;
+        options.Password.RequireNonAlphanumeric = false;
+    })
+    .AddRoles<IdentityRole>()
+    .AddEntityFrameworkStores<ApplicationDbContext>();
+
+builder.Services
+    .AddAuthentication()
+    .AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
+    {
+        options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? string.Empty;
+        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? string.Empty;
+    });
+
+builder.Services.AddAuthorization();
+builder.Services.AddRazorPages();
 builder.Services
     .AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddFluentUIComponents();
-builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpClient();
 
-builder.Services.Configure<OAuthOptions>(builder.Configuration.GetSection(OAuthOptions.SectionName));
-builder.Services.Configure<TelegramOptions>(builder.Configuration.GetSection(TelegramOptions.SectionName));
-
-builder.Services.AddScoped<AuthService>();
-builder.Services.AddScoped<SlotCheckService>();
-builder.Services.AddSingleton<CheckerStateService>();
-builder.Services.AddSingleton<AutoCheckCoordinator>();
-builder.Services.AddHostedService<AutomaticCheckBackgroundService>();
-builder.Services.AddSingleton<TelegramNotificationService>();
-
-builder.Services.AddHttpClient("oauth", client =>
-{
-    var authority = builder.Configuration[$"{OAuthOptions.SectionName}:Authority"];
-    client.BaseAddress = new Uri($"{authority?.TrimEnd('/')}/");
-});
-
-builder.Services.AddHttpClient("visa-api", client =>
-{
-    client.BaseAddress = new Uri("https://visaapi.almaviva-russia.ru/");
-    client.Timeout = TimeSpan.FromSeconds(30);
-});
-
-builder.Services.AddHttpClient("telegram", client =>
-{
-    client.BaseAddress = new Uri("https://api.telegram.org/");
-});
+builder.Services.AddScoped<ISlotCheckService, SlotCheckService>();
+builder.Services.AddScoped<ISlotCheckOrchestrator, SlotCheckOrchestrator>();
+builder.Services.AddScoped<ITelegramNotificationService, TelegramNotificationService>();
+builder.Services.AddHostedService<SlotCheckBackgroundService>();
+builder.Services.AddScoped<IdentitySeedService>();
 
 var app = builder.Build();
 
-if (!app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment())
+{
+    app.UseMigrationsEndPoint();
+}
+else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     app.UseHsts();
@@ -49,36 +62,22 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseAntiforgery();
 
-app.MapGet("/auth/login", (AuthService authService, HttpContext context) =>
-{
-    var callbackUrl = $"{context.Request.Scheme}://{context.Request.Host}/auth/callback";
-    var url = authService.BuildAuthorizationUrl(callbackUrl);
-    return Results.Redirect(url);
-});
-
-app.MapGet("/auth/callback", async (string? code, string? state, AuthService authService, HttpContext context, CancellationToken ct) =>
-{
-    if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(state))
-    {
-        return Results.Redirect("/?error=missing_oauth_code");
-    }
-
-    var callbackUrl = $"{context.Request.Scheme}://{context.Request.Host}/auth/callback";
-
-    try
-    {
-        await authService.HandleCallbackAsync(code, state, callbackUrl, ct);
-        return Results.Redirect("/");
-    }
-    catch
-    {
-        return Results.Redirect("/?error=oauth_callback_failed");
-    }
-});
-
+app.MapRazorPages();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await dbContext.Database.MigrateAsync();
+
+    var seeder = scope.ServiceProvider.GetRequiredService<IdentitySeedService>();
+    await seeder.SeedAsync();
+}
 
 app.Run();
