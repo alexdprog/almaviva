@@ -1,5 +1,6 @@
 using System;
 using AlmavivaSlotChecker.Data;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -7,6 +8,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace AlmavivaSlotChecker.Migrations;
 
+[DbContext(typeof(ApplicationDbContext))]
+[Migration("20260221000000_InitialCreate")]
 public partial class InitialCreate : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
