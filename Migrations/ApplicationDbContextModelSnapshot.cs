@@ -59,8 +59,8 @@ public partial class ApplicationDbContextModelSnapshot : ModelSnapshot
         {
             b.Property<int>("Id").ValueGeneratedOnAdd().HasColumnType("integer").HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
             b.Property<int>("CheckIntervalMinutes").ValueGeneratedOnAdd().HasColumnType("integer").HasDefaultValue(5);
-            b.Property<string>("TelegramBotToken").IsRequired().HasMaxLength(300).HasColumnType("character varying(300)");
-            b.Property<string>("TelegramChatId").IsRequired().HasMaxLength(100).HasColumnType("character varying(100)");
+            b.Property<string>("TelegramBotToken").HasMaxLength(300).HasColumnType("character varying(300)");
+            b.Property<string>("TelegramChatId").HasMaxLength(100).HasColumnType("character varying(100)");
             b.Property<string>("Url").IsRequired().HasMaxLength(2000).HasColumnType("character varying(2000)");
             b.HasKey("Id");
             b.ToTable("SlotCheckSettings");
