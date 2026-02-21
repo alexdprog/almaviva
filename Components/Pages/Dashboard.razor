@@ -1,10 +1,12 @@
 @page "/"
 @attribute [Authorize]
 @inject ISlotCheckOrchestrator SlotCheckOrchestrator
+@inject NavigationManager NavigationManager
 
 <PageTitle>Dashboard</PageTitle>
 
 <FluentCard>
+    <FluentButton Appearance="Appearance.Neutral" @onclick="GoToAuthentication">Аутентификация</FluentButton>
     <h3>Slot monitoring dashboard</h3>
     <p>Status: <strong>@_status.StatusText</strong></p>
     <p>Last check: <strong>@(_status.LastCheckedAt?.ToLocalTime().ToString("g") ?? "—")</strong></p>
@@ -45,5 +47,10 @@
             : $"Ошибка: {result.ErrorMessage}";
 
         _dialogHidden = false;
+    }
+
+    private void GoToAuthentication()
+    {
+        NavigationManager.NavigateTo("https://visa.almaviva-russia.ru/", forceLoad: true);
     }
 }
